@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+dist/
+.test-dist/
+coverage/
+.venv/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.DS_Store

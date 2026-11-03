@@ -1,0 +1,6 @@
+[project]
+name = "beautiful-chaos-vision"
+version = "0.1.0"
+description = "Python foundation for future hockey video processing"
+requires-python = ">=3.11"
+dependencies = []

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Big Data Cup 2026 | Read-only tracking diagnostic</title>
+<style>
+  :root { color-scheme: dark; font: 15px system-ui, sans-serif; background: #10151b; color: #e6edf4; }
+  body { max-width: 1280px; margin: 24px auto; padding: 0 24px; }
+  h1 { font-size: 25px; margin-bottom: 8px; }
+  p { color: #b7c5d3; line-height: 1.5; }
+  canvas { width: 100%; aspect-ratio: 200 / 100; background: #17212b; border: 1px solid #536474; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 16px 0; }
+  button, input { accent-color: #9bd370; }
+  button { padding: 7px 16px; }
+  label.timeline { flex: 1; min-width: 220px; }
+  #timeline { width: 100%; }
+  .key { display: flex; gap: 24px; }
+  .home { color: #49c9ff; } .away { color: #ff9a55; } .puck { color: #f5e878; }
+  #status { font-family: monospace; min-height: 3em; }
+  details { margin-bottom: 20px; } pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+  #error { color: #ff9696; }
+</style>
+<h1>Big Data Cup 2026 - actual tracking diagnostic</h1>
+<p>2025-10-11 Team A (Away) @ Team D (Home), P1. Source-frame playback, not Beautiful Chaos.
+  Positions are unmodified. No interpolation, identity stitching or last-known markers.</p>
+<div class="key"><span class="home">Home / Team D</span><span class="away">Away / Team A</span>
+  <span class="puck">Puck / diamond</span><span>Red segment: &gt;60 ft/s at assumed 30 fps</span></div>
+<p>Six-second history uses a <b>nominal 30 fps assumption</b>, inferred from clock bins, not certified source timing.
+  Trails break at absent coordinates/frames or changed jersey labels. Camera-facing axes: +X right, +Y up.</p>
+<p id="error" role="alert"></p>
+<canvas width="1280" height="640" aria-label="Rink with actual player positions, separate puck and gap-safe tracking-ID trails"></canvas>
+<div class="controls">
+  <button id="play" disabled>Play</button><button id="reset" disabled>Reset</button>
+  <label class="timeline">Source frame<input id="timeline" aria-label="Source frame" type="range" min="0" max="750" value="0" step="1" disabled></label>
+  <label><input id="ids" type="checkbox"> Player IDs</label>
+  <label><input id="puck" type="checkbox" checked> Puck</label>
+  <output id="time"></output>
+</div>
+<div id="status" role="status">Loading local source passage...</div>
+<details><summary>Missing observations and source provenance</summary><pre id="diagnostics"></pre></details>
+<p>Data: Stathletes, Big Data Cup 2026. Non-commercial research diagnostic.
+  Source: <a href="https://github.com/bigdatacup/Big-Data-Cup-2026">official repository</a>.
+  <a href="https://github.com/bigdatacup/Big-Data-Cup-2026/blob/main/legal.md">User agreement</a>.
+  Raw CSVs are not bundled; do not redistribute without clarification.</p>
+<script type="module">
+const canvas = document.querySelector("canvas");
+const ctx = canvas.getContext("2d");
+const slider = document.querySelector("#timeline");
+const play = document.querySelector("#play");
+const reset = document.querySelector("#reset");
+const ids = document.querySelector("#ids");
+const puck = document.querySelector("#puck");
+const status = document.querySelector("#status");
+const output = document.querySelector("#time");
+const diagnostics = document.querySelector("#diagnostics");
+const point = (e) => [64 + (e.x + 100) * 5.76, 564 - (e.y + 42.5) * 5.76];
+const valid = (e) => Number.isFinite(e.x) && Number.isFinite(e.y);
+const key = (e) => `${e.kind}/${e.team}/${e.id}`;
+const color = (e) => e.kind === "Puck" ? "#f5e878" : e.team === "Home" ? "#49c9ff" : "#ff9a55";
+let data, index = 0, running = false, startedAt, startIndex;
+const setPlaying = (next) => {
+  running = next; play.textContent = next ? "Pause" : "Play";
+  startedAt = performance.now(); startIndex = index;
+};
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#8195a8"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(64, 74.4, 1152, 489.6, 100); ctx.stroke();
+  for (const x of [-89, -25, 0, 25, 89]) {
+    ctx.strokeStyle = x === 0 ? "#925863" : "#3c688c";
+    ctx.beginPath(); ctx.moveTo(point({x,y:42.5})[0],74.4);
+    ctx.lineTo(point({x,y:42.5})[0],564); ctx.stroke();
+  }
+  ctx.strokeStyle = "#8195a8"; ctx.beginPath(); ctx.arc(640,319.2,86.4,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle = "#b7c5d3"; ctx.font = "16px monospace";
+  ctx.fillText("-100 ft",64,600); ctx.fillText("0",634,600); ctx.fillText("+100 ft",1130,600);
+  ctx.fillText("+42.5 ft",64,45); ctx.fillText("+Y",22,90);
+  const frame = data.frames[index];
+  const first = Math.max(0,index-180);
+  let previous = new Map(), previousFrame = null, broken = 0, jumps = 0;
+  for (let i=first;i<=index;i++) {
+    const f = data.frames[i];
+    const next = new Map();
+    for (const entity of f.entities) {
+      if (entity.kind === "Puck" && !puck.checked) continue;
+      if (!valid(entity)) { broken++; continue; }
+      const old = previous.get(key(entity));
+      if (old && previousFrame === f.frame-1 && old.jersey === entity.jersey) {
+        const speed = Math.hypot(entity.x-old.x,entity.y-old.y)*data.assumedFps;
+        if (speed>60) jumps++;
+        ctx.strokeStyle = speed>60 ? "#ff4763" : color(entity);
+        ctx.globalAlpha = 0.1+0.65*(1-(index-i)/181);
+        ctx.lineWidth = entity.kind === "Puck" ? 1 : 2;
+        ctx.beginPath();ctx.moveTo(...point(old));ctx.lineTo(...point(entity));ctx.stroke();
+      }
+      next.set(key(entity),entity);
+    }
+    previous=next; previousFrame=f.frame;
+  }
+  ctx.globalAlpha=1;
+  for (const e of frame.entities) {
+    if (!valid(e) || e.kind==="Puck" && !puck.checked) continue;
+    const [x,y]=point(e);ctx.fillStyle=color(e);ctx.beginPath();
+    if (e.kind==="Puck") {ctx.moveTo(x,y-6);ctx.lineTo(x+6,y);ctx.lineTo(x,y+6);ctx.lineTo(x-6,y);ctx.closePath();}
+    else ctx.arc(x,y,5,0,2*Math.PI);
+    ctx.fill();
+    if (ids.checked && e.kind==="Player") {
+      ctx.font="12px monospace";ctx.fillText(`${e.jersey||"?"} [${e.id}]`,x+8,y-7);
+    }
+  }
+  const players=frame.entities.filter(e=>e.kind==="Player");
+  const missing=frame.entities.filter(e=>!valid(e));
+  const seen=new Map(data.frames.slice(first,index+1).flatMap(f=>f.entities).filter(e=>e.kind==="Player").map(e=>[key(e),e]));
+  const present=new Set(players.map(key));
+  const absent=[...seen.values()].filter(e=>!present.has(key(e)));
+  output.textContent=`${(index/data.assumedFps).toFixed(2)} s nominal`;
+  slider.value=index;
+  status.textContent=`Source frame ${frame.frame} | P${frame.period??"?"} clock ${frame.clock??"missing"} | `
+    + `Home ${players.filter(e=>e.team==="Home").length}, Away ${players.filter(e=>e.team==="Away").length} player rows | `
+    + `${missing.length} rows missing XY | ${absent.length} recent track IDs absent now | ${jumps} jump segments in history`;
+  diagnostics.textContent=`Source: ${data.source}\nSHA256: ${data.sha256}\nImage Id: ${frame.imageId??"not supplied"}\n`
+    +`Current missing XY: ${missing.map(e=>key(e)).join(", ")||"none"}\n`
+    +`Recent IDs absent now (NOT proof of tracking failure; could be off-camera, off-ice or changed ID):\n`
+    +`${absent.map(e=>`${key(e)} jersey ${e.jersey||"unknown"}`).join(", ")||"none"}\n`
+    +`Missing-coordinate rows encountered in six-second history: ${broken}\nIDs shown as jersey [tracking ID]. No global NHL identities asserted.`;
+}
+slider.addEventListener("input",()=>{index=Number(slider.value);setPlaying(false);draw();});
+play.addEventListener("click",()=>{if(index===data.frames.length-1)index=0;setPlaying(!running);draw();});
+reset.addEventListener("click",()=>{index=0;ids.checked=false;puck.checked=true;setPlaying(false);draw();});
+ids.addEventListener("change",draw);puck.addEventListener("change",draw);
+function tick(now) {
+  if(running) {
+    index=Math.min(data.frames.length-1,startIndex+Math.floor((now-startedAt)*data.assumedFps/1000));
+    if(index===data.frames.length-1)setPlaying(false);
+    draw();
+  }
+  requestAnimationFrame(tick);
+}
+try {
+  const response=await fetch("/data.json");
+  if(!response.ok)throw new Error(`Local passage request failed: HTTP ${response.status}`);
+  data=await response.json();slider.max=data.frames.length-1;
+  slider.disabled=play.disabled=reset.disabled=false;draw();requestAnimationFrame(tick);
+} catch(error) {
+  document.querySelector("#error").textContent=error instanceof Error?error.message:String(error);
+  status.textContent="No tracking passage loaded. Check the preview server output.";
+}
+</script>
+</html>

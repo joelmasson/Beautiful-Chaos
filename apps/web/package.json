@@ -1,0 +1,28 @@
+{
+  "name": "@beautiful-chaos/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "npm run build --workspace @beautiful-chaos/generative-engine",
+    "dev": "next dev",
+    "prebuild": "npm run build --workspace @beautiful-chaos/generative-engine",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test:compile": "npm run build --workspace @beautiful-chaos/generative-engine && tsc -p tsconfig.test.json",
+    "test": "npm run test:compile && node --test test/*.test.mjs",
+    "generate:sample": "npm run test:compile && node .test-dist/data/samples/generate.js ../../data/samples/neutral-zone-attack.json"
+  },
+  "dependencies": {
+    "@beautiful-chaos/contracts": "0.1.0",
+    "@beautiful-chaos/generative-engine": "0.1.0",
+    "next": "^15.3.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "retrievedAt": "2026-11-03T19:11:44Z",
+  "gameId": 2026020224,
+  "sources": [
+    {
+      "endpoint": "https://api-web.nhle.com/v1/gamecenter/2026020224/play-by-play",
+      "rawFile": "play-by-play.json",
+      "sha256": "fbe21913afe5fd1fe755a4c1a62d675ece2cb6560467f1fe6868ed63f3f34ee7",
+      "headersFile": "play-by-play.headers"
+    },
+    {
+      "endpoint": "https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp=gameId=2026020224",
+      "rawFile": "shifts.json",
+      "sha256": "6ef90aee39c443969144097f985782a27c32760f2882887c88b708ee161549d5",
+      "headersFile": "shifts.headers"
+    }
+  ],
+  "passage": {
+    "period": 1,
+    "startTimeInPeriod": "02:13",
+    "endTimeInPeriod": "02:58",
+    "durationMs": 45000
+  }
+}

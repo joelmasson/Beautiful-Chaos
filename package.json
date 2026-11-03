@@ -1,0 +1,19 @@
+{
+  "name": "beautiful-chaos",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/contracts",
+    "packages/generative-engine"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @beautiful-chaos/web",
+    "start": "npm run start --workspace @beautiful-chaos/web",
+    "build": "npm run build --workspace @beautiful-chaos/web",
+    "typecheck": "npm run build --workspace @beautiful-chaos/generative-engine && npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,15 @@
+HTTP/2 200 
+date: Tue, 03 Nov 2026 19:10:48 GMT
+content-type: application/json
+vary: Accept-Encoding
+vary: Origin
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+strict-transport-security: max-age=31622400
+strict-transport-security: max-age=157680000; includeSubDomains
+x-content-type-options: nosniff
+referrer-policy: no-referrer,strict-origin-when-cross-origin
+permissions-policy: attribution-reporting=(), hid=(), window-management=(), document-domain=(), usb=(), xr-spatial-tracking=(), midi=(), compute-pressure=(), display-capture=(), accelerometer=(), payment=(), camera=(), microphone=(), magnetometer=(), autoplay=(), gyroscope=(), idle-detection=(), screen-wake-lock=(), ambient-light-sensor=(), otp-credentials=(), publickey-credentials-create=(), speaker-selection=(), bluetooth=(), fullscreen=(), serial=(), gamepad=(), local-fonts=(), picture-in-picture=(), identity-credentials-get=(), encrypted-media=(), web-share=(), geolocation=()
+cf-cache-status: DYNAMIC
+server: cloudflare
+cf-ray: a54dae5dd9a17769-YYZ
+
